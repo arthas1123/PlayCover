@@ -130,19 +130,8 @@ struct KeyCoverKey {
 
     func encryptKeyDB() throws {
         if let plainTextKey = KeyCover.shared.keyCoverPlainTextKey {
-            // encrypt the db file
-            let task = Process()
-            task.launchPath = "/usr/bin/openssl"
-            task.currentDirectoryPath = KeyCover.playChainPath.path
-            task.arguments = ["enc", "-aes-256-cbc", "-A",
-                                "-in", decryptedKeyDB.path,
-                                "-out", encryptedKeyDB.path,
-                                "-k", plainTextKey]
-            task.launch()
-            task.waitUntilExit()
-
-            // delete the key dbs
-            try deleteKeyDB()
+            try KeyCoverCrypto.convert(source: decryptedKeyDB, destination: encryptedKeyDB,
+                                       password: plainTextKey, decrypt: false)
 
             Task { @MainActor in
                 KeyCoverObservable.shared.update()
@@ -152,16 +141,8 @@ struct KeyCoverKey {
 
     func decryptKeyDB() throws {
         if let plainTextKey = KeyCover.shared.keyCoverPlainTextKey {
-            // decrypt the zip file
-            let task = Process()
-            task.launchPath = "/usr/bin/openssl"
-            task.arguments = ["enc", "-aes-256-cbc", "-A", "-d", "-in", encryptedKeyDB.path, "-out",
-                              decryptedKeyDB.path,
-                              "-k", plainTextKey]
-            task.launch()
-            task.waitUntilExit()
-            // delete the encrypted key file
-            try FileManager.default.removeItem(at: encryptedKeyDB)
+            try KeyCoverCrypto.convert(source: encryptedKeyDB, destination: decryptedKeyDB,
+                                       password: plainTextKey, decrypt: true)
 
             Task { @MainActor in
                 KeyCoverObservable.shared.update()
